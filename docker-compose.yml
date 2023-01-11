@@ -6,8 +6,15 @@ services:
     container_name: microblogpub
     user: 1000:1000
     restart: always
+    networks:
+      - nproxy
     volumes:
       - ./data:/app/data
       - ./app/static:/app/app/static
     ports:
       - "8000:8000"
+
+networks:
+  nproxy:
+    external:
+      name: nproxy
