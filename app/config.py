@@ -101,6 +101,7 @@ class Config(pydantic.BaseModel):
     secret: str
     debug: bool = False
     trusted_hosts: list[str] = ["127.0.0.1"]
+    tags: list[str] | None = None
     manually_approves_followers: bool = False
     privacy_replace: list[_PrivacyReplace] | None = None
     metadata: list[_ProfileMetadata] | None = None

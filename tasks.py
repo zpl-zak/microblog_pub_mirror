@@ -217,7 +217,7 @@ def embed_version() -> Generator[None, None, None]:
 def build_docker_image(ctx):
     # type: (Context) -> None
     with embed_version():
-        run("docker build -t microblogpub/microblogpub .")
+        run("docker build -t microblogpub .")
 
 
 @task
