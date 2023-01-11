@@ -10,11 +10,13 @@
 <div class="p-note summary">
 {{ local_actor.summary | safe }}
     {% if TAGS %}
+    <nav class="flexbox">
     <ul>
         {% for tag in TAGS %}
             <li><a href="{{BASE_URL}}/t/{{tag}}" {% if request.url.path == "/t/{{tag}}" %}class="active"{% endif %}>#{{tag}}</a></li>
         {% endfor %}
     </ul>
+    </nav>
     {% endif %}
 </div> 
 
