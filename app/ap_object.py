@@ -184,6 +184,14 @@ class Object:
 
         return content
 
+    @cached_property
+    def raw_content(self) -> str | None:
+        raw_content = self.ap_object.get("content")
+        if not raw_content:
+            return None
+
+        return markdown(raw_content)
+
     @property
     def summary(self) -> str | None:
         return self.ap_object.get("summary")

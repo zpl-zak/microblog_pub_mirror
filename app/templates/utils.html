@@ -510,8 +510,17 @@
     <nav class="flexbox activity-bar margin-top-20">
     <ul>
         <li>
-            <div><a href="{{ wm_reply.url }}" rel="nofollow" class="object-permalink u-url u-uid">permalink</a></div>
+            <div>
+                <a href="{{ wm_reply.url }}" rel="nofollow" class="object-permalink u-url u-uid">permalink</a>
+            </div>
         </li>
+        {% if is_admin and object.is_from_outbox %}
+        <li>
+            <div>
+                <a href="{{ BASE_URL }}/raw_object?ap_id={{ object.ap_id | safe }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">raw</a>
+            </div>
+        </li>
+        {% endif %}
         <li>
             <time class="dt-published" datetime="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}" title="{{ wm_reply.published_at.replace(microsecond=0).isoformat() }}">{{ wm_reply.published_at | timeago }}</time>
         </li>
@@ -657,8 +666,17 @@
     <nav class="flexbox activity-bar">
     <ul>
         <li>
-            <div><a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a></div>
+            <div>
+                <a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a>
+            </div>
         </li>
+        {% if is_admin and object.is_from_outbox %}
+        <li>
+            <div>
+                <a href="{{ BASE_URL }}/raw_object?ap_id={{ object.ap_id | safe }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">raw</a>
+            </div>
+        </li>
+        {% endif %}
 
         {% if object.is_from_outbox and is_object_page and not is_admin and not request.url.path.startswith("/remote_interaction") %}
             <li>

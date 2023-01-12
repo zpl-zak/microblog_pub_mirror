@@ -1531,6 +1531,28 @@ async def serve_proxy_media_resized(
         )
 
 
+@app.get("/raw_object")
+async def serve_raw_object(
+    request: Request,
+    ap_id: str,
+    db_session: AsyncSession = Depends(get_db_session),
+) -> PlainTextResponse:
+    requested_object = await boxes.get_anybox_object_by_ap_id(db_session, ap_id)
+    if not requested_object or requested_object.is_deleted:
+        raise HTTPException(status_code=404)
+
+    if not hasattr(requested_object, 'source'):
+        return PlainTextResponse(
+            requested_object.ap_object.get("content"),
+            headers={"Content-Type": "text/plain"},
+        )
+
+    return PlainTextResponse(
+        requested_object.source,
+        headers={"Content-Type": "text/plain"},
+    )
+
+
 @app.get("/attachments/{content_hash}/{filename}")
 async def serve_attachment(
     content_hash: str,
