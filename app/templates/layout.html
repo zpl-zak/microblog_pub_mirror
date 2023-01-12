@@ -54,13 +54,14 @@
     {% if custom_footer %}
         {{ custom_footer | safe }}
     {% else %}
-        Runs a modified version of <a href="https://microblog.pub/" target="_blank">microblog.pub</a>. <a href="{{ url_for("login") }}">Admin</a>. 
+        <a href="{{ url_for("login") }}">Admin</a>. 
         {% if is_admin %}
-        {{ header_link("followers", "Followers") }} <span class="counter">{{ followers_count }}</span>. 
+            {{ header_link("followers", "Followers") }} <span class="counter">{{ followers_count }}</span>. 
+            {{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span>.
         {% endif %}
-        {% if is_admin %}
-        {{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span>.
-        {% endif %}
+        <div>
+            Runs a modified version of <a href="https://microblog.pub/" target="_blank">microblog.pub</a>. Supports <a href="https://activitypub.rocks/" target="_blank">ActivityPub</a>!
+        </div>
     {% endif %}
     </div>
 </footer>
