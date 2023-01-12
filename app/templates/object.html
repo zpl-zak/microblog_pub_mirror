@@ -8,7 +8,7 @@
 {% else %}
     {% set excerpt = outbox_object.summary | html2text | trim | truncate(50) %}
 {% endif %}
-<title>{% if outbox_object.name %}{{ outbox_object.name }}{% else %}{{ local_actor.display_name }}: "{{ excerpt }}"{% endif %}</title>
+<title>{% if outbox_object.name %}{{ outbox_object.name }}{% else %}blog.zak: "{{ excerpt }}"{% endif %}</title>
 <link rel="webmention" href="{{ url_for("webmention_endpoint") }}">
 <link rel="alternate" href="{{ request.url }}" type="application/activity+json">
 <meta name="description" content="{{ excerpt }}">
