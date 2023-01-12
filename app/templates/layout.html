@@ -54,7 +54,7 @@
     {% if custom_footer %}
         {{ custom_footer | safe }}
     {% else %}
-        <a href="{{ url_for("login") }}">Admin</a>. 
+        Runs a modified version of <a href="https://microblog.pub/" target="_blank">microblog.pub</a>. <a href="{{ url_for("login") }}">Admin</a>. 
         {% if is_admin %}
         {{ header_link("followers", "Followers") }} <span class="counter">{{ followers_count }}</span>. 
         {% endif %}

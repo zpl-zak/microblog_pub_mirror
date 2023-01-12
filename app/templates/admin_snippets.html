@@ -9,6 +9,6 @@
 
 {% for anybox_object in threads %}
     <div class="actor-action"></div>
-    {{ utils.display_object(anybox_object) }}
+    {{ utils.display_object(anybox_object, is_code=True) }}
 {% endfor %}
 {% endblock %}

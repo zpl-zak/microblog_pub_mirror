@@ -154,6 +154,15 @@
 {% endblock %}
 {% endmacro %}
 
+{% macro admin_raw_button(ap_object) %}
+{% block admin_raw_button scoped %}
+<form action="{{ BASE_URL }}/raw_object" method="GET">
+    <input type="hidden" name="ap_id" value="{{ ap_object.ap_id }}">
+    <input type="submit" value="raw">
+</form>
+{% endblock %}
+{% endmacro %}
+
 {% macro admin_force_delete_button(ap_object_id, permalink_id=None) %}
 {% block admin_force_delete_button scoped %}
 <form action="{{ request.url_for("admin_actions_force_delete") }}" class="object-delete-form" method="POST">
@@ -536,7 +545,7 @@
 {% endblock %}
 {% endmacro %}
 
-{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False, is_h_entry=True) %}
+{% macro display_object(object, likes=[], shares=[], webmentions=[], expanded=False, actors_metadata={}, is_object_page=False, is_h_entry=True, is_code=False) %}
 {% block display_object scoped %}
 {% set is_article_mode = object.is_from_outbox and object.ap_type == "Article" and is_object_page %}
 {% if object.ap_type in ["Note", "Article", "Video", "Page", "Question", "Event"] %}
@@ -599,7 +608,15 @@
     {% endif %}
         <div class="obj-content">
         <div class="e-content">
+            {% if not is_code %}
             {{ object.content | clean_html(object) | safe }}
+            {% elif object.source %}
+                <div class="form admin-new">
+                    <textarea name="content" rows="10" cols="50" designMode="on" readonly aria-readonly="true">{{ object.source }}</textarea>
+                </div>
+            {% else %}
+                Snippets can not be previewed on this page!
+            {% endif %}
         </div>
 
     {% if object.ap_type == "Question" %}
@@ -665,17 +682,19 @@
 
     <nav class="flexbox activity-bar">
     <ul>
-        <li>
-            <div>
-                <a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a>
-            </div>
-        </li>
-        {% if is_admin and object.is_from_outbox %}
-        <li>
-            <div>
-                <a href="{{ BASE_URL }}/raw_object?ap_id={{ object.ap_id | safe }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">raw</a>
-            </div>
-        </li>
+        {% if not is_code %}
+            <li>
+                <div>
+                    <a href="{{ object.url }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">permalink</a>
+                </div>
+            </li>
+            {% if is_admin and object.is_from_outbox %}
+            <li>
+                <div>
+                    <a href="{{ BASE_URL }}/raw_object?ap_id={{ object.ap_id | safe }}"{% if object.is_from_inbox %} rel="nofollow"{% endif %} class="object-permalink u-url u-uid">raw</a>
+                </div>
+            </li>
+            {% endif %}
         {% endif %}
 
         {% if object.is_from_outbox and is_object_page and not is_admin and not request.url.path.startswith("/remote_interaction") %}
@@ -748,21 +767,28 @@
             <li>
                 {{ admin_delete_button(object) }}
             </li>
-
-            <li>
-                {% if object.is_pinned %}
-                    {{ admin_unpin_button(object.ap_id, object.permalink_id) }}
-                {% else %}
-                    {{ admin_pin_button(object.ap_id, object.permalink) }}
-                {% endif %}
-            </li>
+        
+            {% if not is_code %}
+                <li>
+                    {% if object.is_pinned %}
+                        {{ admin_unpin_button(object.ap_id, object.permalink_id) }}
+                    {% else %}
+                        {{ admin_pin_button(object.ap_id, object.permalink) }}
+                    {% endif %}
+                </li>
+                
+                <li>
+                    {{ admin_reply_button(object.ap_id) }}
+                </li>
+            {% else %}
+                <li>
+                    {{ admin_raw_button(object) }}
+                </li>
+            {% endif %}
         {% endif %}
 
-        <li>
-            {{ admin_reply_button(object.ap_id) }}
-        </li>
-
         {% if not object.is_from_outbox %}
+        {% if not is_code %}
             <li>
                 {% if object.liked_via_outbox_object_ap_id %}
                     {{ admin_undo_button(object.liked_via_outbox_object_ap_id, "unlike", object.permalink_id) }}
@@ -795,10 +821,11 @@
                 </li>
             {% endif %}
         {% endif %}
-        {% if object.is_from_inbox or object.is_from_outbox %}
-            <li>
-                {{ admin_expand_button(object) }}
-            </li>
+            {% if object.is_from_inbox or object.is_from_outbox %}
+                <li>
+                    {{ admin_expand_button(object) }}
+                </li>
+            {% endif %}
         {% endif %}
         {% if object.is_from_inbox and not object.announced_via_outbox_object_ap_id and object.is_local_reply %}
             <li>
