@@ -110,6 +110,7 @@ class Config(pydantic.BaseModel):
     custom_footer: str | None = None
     emoji: str | None = None
     also_known_as: str | None = None
+    ga_analytics: str | None = None
 
     hides_followers: bool = False
     hides_following: bool = False
