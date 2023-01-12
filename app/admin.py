@@ -587,28 +587,214 @@ async def admin_direct_messages(
                 )
             ).scalars()
         )
-        has_actors = True
         # If this message from outbox starts a thread with no replies, look
         # at the mentions
         if not actors and anybox_object.is_from_outbox:
-            has_actors = False
-            actors = (  # type: ignore
-                await db_session.execute(
-                    select(models.Actor).where(
-                        models.Actor.ap_id.in_(
-                            mention["href"]
-                            for mention in anybox_object.tags
-                            if mention["type"] == "Mention"
+            actors = list(
+                (  # type: ignore
+                    await db_session.execute(
+                        select(models.Actor).where(
+                            models.Actor.ap_id.in_(
+                                mention["href"]
+                                for mention in anybox_object.tags
+                                if mention["type"] == "Mention"
+                            )
                         )
                     )
-                )
             ).scalars()
-        threads.append((anybox_object, convo, actors, has_actors))
+        )
+        if actors:
+            threads.append((anybox_object, convo, actors))
 
     return await templates.render_template(
         db_session,
         request,
         "admin_direct_messages.html",
+        {
+            "threads": threads,
+        },
+    )
+
+@router.get("/snippets")
+async def admin_snippets(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+    cursor: str | None = None,
+) -> templates.TemplateResponse:
+    inbox_convos = (
+        (
+            await db_session.execute(
+                select(
+                    models.InboxObject.ap_context,
+                    models.InboxObject.actor_id,
+                    func.count(1).label("count"),
+                    func.max(models.InboxObject.ap_published_at).label(
+                        "most_recent_date"
+                    ),
+                )
+                .where(
+                    models.InboxObject.visibility == ap.VisibilityEnum.DIRECT,
+                    models.InboxObject.ap_context.is_not(None),
+                    # Skip transient object like poll relies
+                    models.InboxObject.is_transient.is_(False),
+                    models.InboxObject.is_deleted.is_(False),
+                )
+                .group_by(models.InboxObject.ap_context, models.InboxObject.actor_id)
+            )
+        )
+        .unique()
+        .all()
+    )
+    outbox_convos = (
+        (
+            await db_session.execute(
+                select(
+                    models.OutboxObject.ap_context,
+                    func.count(1).label("count"),
+                    func.max(models.OutboxObject.ap_published_at).label(
+                        "most_recent_date"
+                    ),
+                )
+                .where(
+                    models.OutboxObject.visibility == ap.VisibilityEnum.DIRECT,
+                    models.OutboxObject.ap_context.is_not(None),
+                    # Skip transient object like poll relies
+                    models.OutboxObject.is_transient.is_(False),
+                    models.OutboxObject.is_deleted.is_(False),
+                )
+                .group_by(models.OutboxObject.ap_context)
+            )
+        )
+        .unique()
+        .all()
+    )
+
+    # Build a "threads index" by combining objects from the inbox and outbox
+    convos = {}
+    for inbox_convo in inbox_convos:
+        if inbox_convo.ap_context not in convos:
+            convos[inbox_convo.ap_context] = {
+                "actor_ids": {inbox_convo.actor_id},
+                "count": inbox_convo.count,
+                "most_recent_from_inbox": inbox_convo.most_recent_date,
+                "most_recent_from_outbox": datetime.min,
+            }
+        else:
+            convos[inbox_convo.ap_context]["actor_ids"].add(inbox_convo.actor_id)
+            convos[inbox_convo.ap_context]["count"] += inbox_convo.count
+            convos[inbox_convo.ap_context]["most_recent_from_inbox"] = max(
+                inbox_convo.most_recent_date,
+                convos[inbox_convo.ap_context]["most_recent_from_inbox"],
+            )
+
+    for outbox_convo in outbox_convos:
+        if outbox_convo.ap_context not in convos:
+            convos[outbox_convo.ap_context] = {
+                "actor_ids": set(),
+                "count": outbox_convo.count,
+                "most_recent_from_inbox": datetime.min,
+                "most_recent_from_outbox": outbox_convo.most_recent_date,
+            }
+        else:
+            convos[outbox_convo.ap_context]["count"] += outbox_convo.count
+            convos[outbox_convo.ap_context]["most_recent_from_outbox"] = max(
+                outbox_convo.most_recent_date,
+                convos[outbox_convo.ap_context]["most_recent_from_outbox"],
+            )
+
+    # Fetch the latest object for each threads
+    convos_with_last_from_inbox = []
+    convos_with_last_from_outbox = []
+    for context, convo in convos.items():
+        if convo["most_recent_from_inbox"] > convo["most_recent_from_outbox"]:
+            convos_with_last_from_inbox.append(
+                and_(
+                    models.InboxObject.ap_context == context,
+                    models.InboxObject.ap_published_at
+                    == convo["most_recent_from_inbox"],
+                )
+            )
+        else:
+            convos_with_last_from_outbox.append(
+                and_(
+                    models.OutboxObject.ap_context == context,
+                    models.OutboxObject.ap_published_at
+                    == convo["most_recent_from_outbox"],
+                )
+            )
+    last_from_inbox = (
+        (
+            (
+                await db_session.scalars(
+                    select(models.InboxObject)
+                    .where(or_(*convos_with_last_from_inbox))
+                    .options(
+                        joinedload(models.InboxObject.actor),
+                    )
+                )
+            )
+            .unique()
+            .all()
+        )
+        if convos_with_last_from_inbox
+        else []
+    )
+    last_from_outbox = (
+        (
+            (
+                await db_session.scalars(
+                    select(models.OutboxObject)
+                    .where(or_(*convos_with_last_from_outbox))
+                    .options(
+                        joinedload(
+                            models.OutboxObject.outbox_object_attachments
+                        ).options(joinedload(models.OutboxObjectAttachment.upload)),
+                    )
+                )
+            )
+            .unique()
+            .all()
+        )
+        if convos_with_last_from_outbox
+        else []
+    )
+
+    # Build the template response
+    threads = []
+    for anybox_object in sorted(
+        last_from_inbox + last_from_outbox,
+        key=lambda x: x.ap_published_at,
+        reverse=True,
+    ):
+        convo = convos[anybox_object.ap_context]
+        actors = list(
+            (
+                await db_session.execute(
+                    select(models.Actor).where(models.Actor.id.in_(convo["actor_ids"]))
+                )
+            ).scalars()
+        )
+        if not actors and anybox_object.is_from_outbox:
+            actors = list(
+                (  # type: ignore
+                    await db_session.execute(
+                        select(models.Actor).where(
+                            models.Actor.ap_id.in_(
+                                mention["href"]
+                                for mention in anybox_object.tags
+                                if mention["type"] == "Mention"
+                            )
+                        )
+                    )
+            ).scalars()
+        )
+        if not actors:
+            threads.append((anybox_object))
+
+    return await templates.render_template(
+        db_session,
+        request,
+        "admin_snippets.html",
         {
             "threads": threads,
         },

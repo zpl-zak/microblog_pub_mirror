@@ -1,0 +1,14 @@
+{%- import "utils.html" as utils with context -%}
+{% extends "layout.html" %}
+
+{% block head %}
+<title>blog.zak - Snippets</title>
+{% endblock %}
+
+{% block content %}
+
+{% for anybox_object in threads %}
+    <div class="actor-action"></div>
+    {{ utils.display_object(anybox_object) }}
+{% endfor %}
+{% endblock %}
