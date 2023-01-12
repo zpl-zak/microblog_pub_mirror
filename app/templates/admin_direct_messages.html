@@ -7,13 +7,15 @@
 
 {% block content %}
 
-{% for anybox_object, convo, actors in threads %}
+{% for anybox_object, convo, actors, has_actors in threads %}
     <div class="actor-action">
+    {% if has_actors %}
     With {% for actor in actors %}
     <a href="{{ url_for("admin_profile") }}?actor_id={{ actor.ap_id }}">
         {{ actor.handle }}
     </a>
     {% endfor %}
+    {% endif %}
     </div>
     {{ utils.display_object(anybox_object) }}
 {% endfor %}

@@ -587,9 +587,11 @@ async def admin_direct_messages(
                 )
             ).scalars()
         )
+        has_actors = True
         # If this message from outbox starts a thread with no replies, look
         # at the mentions
         if not actors and anybox_object.is_from_outbox:
+            has_actors = False
             actors = (  # type: ignore
                 await db_session.execute(
                     select(models.Actor).where(
@@ -601,7 +603,7 @@ async def admin_direct_messages(
                     )
                 )
             ).scalars()
-        threads.append((anybox_object, convo, actors))
+        threads.append((anybox_object, convo, actors, has_actors))
 
     return await templates.render_template(
         db_session,
