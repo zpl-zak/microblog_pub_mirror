@@ -59,6 +59,7 @@
         {% if not HIDES_FOLLOWING %}
         <li>{{ header_link("following", "Following") }} <span class="counter">{{ following_count }}</span></li>
         {% endif %}
+        <li>{{ header_link("serve_contact", "Contact") }}</li>
         <li>{{ header_link("get_remote_follow", "Remote follow") }}</li>
         {% for navbar_item in NAVBAR_ITEMS.EXTRA_NAVBAR_ITEMS %}
             {{ navbar_item_link(navbar_item) }}

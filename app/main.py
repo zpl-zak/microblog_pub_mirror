@@ -1229,6 +1229,19 @@ async def remote_interaction(
         {"outbox_object": outbox_object},
     )
 
+@app.get("/contact")
+async def serve_contact(
+    request: Request,
+    db_session: AsyncSession = Depends(get_db_session),
+) -> templates.TemplateResponse:
+    return await templates.render_template(
+        db_session,
+        request,
+        "contact.html",
+        {},
+    )
+
+
 
 @app.post("/remote_interaction")
 async def post_remote_interaction(
@@ -1616,7 +1629,8 @@ Disallow: /followers
 Disallow: /following
 Disallow: /admin
 Disallow: /remote_interaction
-Disallow: /remote_follow"""
+Disallow: /remote_follow
+Disallow: /contact"""
 
 
 async def _get_outbox_for_feed(db_session: AsyncSession) -> list[models.OutboxObject]:
