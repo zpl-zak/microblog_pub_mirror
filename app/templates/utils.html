@@ -817,6 +817,10 @@
 
             {% if object.is_from_inbox %}
                 <li>
+                    {{ admin_reply_button(object.ap_id) }}
+                </li>
+                
+                <li>
                     {{ admin_profile_button(object.actor.ap_id) }}
                 </li>
             {% endif %}
